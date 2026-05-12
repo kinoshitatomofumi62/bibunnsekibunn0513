@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MathCard - プレミアム微分積分暗記カード</title>
+    <!-- KaTeX CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #F8FAFF;
+        }
+        .perspective-1000 { perspective: 1000px; }
+        .preserve-3d { transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .backface-hidden { backface-visibility: hidden; }
+        .flipped { transform: rotateY(180deg); }
+        
+        .bg-orb {
+            position: absolute;
+            width: 40%;
+            aspect-ratio: 1;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.4;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .animate-spin-slow {
+            animation: spin 8s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-6 text-slate-900 relative overflow-hidden">
+
+    <!-- Background Orbs -->
+    <div class="bg-orb top-[-10%] right-[-10%] bg-blue-100"></div>
+    <div class="bg-orb bottom-[-10%] left-[-10%] bg-indigo-100"></div>
+
+    <!-- Header -->
+    <header class="mb-8 text-center relative z-10 select-none">
+        <h1 class="text-4xl font-[900] tracking-tight text-slate-900 mb-2 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-500">
+            MathCard
+        </h1>
+        <div class="flex flex-wrap items-center justify-center gap-2 text-slate-400 text-xs font-semibold uppercase tracking-widest">
+            <span class="px-2 py-0.5 rounded bg-white shadow-sm border border-slate-100 whitespace-nowrap">Space</span>
+            <span class="whitespace-nowrap">to flip</span>
+            <span class="mx-1 opacity-30 hidden sm:inline">•</span>
+            <span class="px-2 py-0.5 rounded bg-white shadow-sm border border-slate-100 whitespace-nowrap">← →</span>
+            <span class="whitespace-nowrap">to navigate</span>
+        </div>
+    </header>
+
+    <!-- Mode & Shuffle Selector -->
+    <div class="flex flex-col sm:flex-row items-center gap-3 mb-10 relative z-10">
+        <div class="bg-white/60 backdrop-blur-md p-1.5 rounded-2xl border border-white shadow-sm flex items-center">
+            <button onclick="changeMode('all')" id="tab-all" class="mode-tab px-6 py-2 rounded-xl text-sm font-bold transition-all duration-300">両方</button>
+            <button onclick="changeMode('differentiation')" id="tab-differentiation" class="mode-tab px-6 py-2 rounded-xl text-sm font-bold transition-all duration-300">微分</button>
+            <button onclick="changeMode('integration')" id="tab-integration" class="mode-tab px-6 py-2 rounded-xl text-sm font-bold transition-all duration-300">不定積分</button>
+        </div>
+        
+        <button onclick="shuffleCards()" class="h-11 px-5 flex items-center gap-2.5 rounded-2xl bg-indigo-50 shadow-sm hover:shadow-indigo-100 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all text-indigo-600 border border-indigo-100/50 group cursor-pointer">
+            <svg class="group-hover:rotate-180 transition-transform duration-700 w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            <span class="text-[10px] font-[900] uppercase tracking-widest">Shuffle</span>
+        </button>
+    </div>
+
+    <!-- Card area -->
+    <div class="relative w-full max-w-lg aspect-[4/2.8] perspective-1000 z-10">
+        <div id="card" class="relative w-full h-full preserve-3d cursor-pointer" onclick="toggleFlip()">
+            
+            <!-- Front -->
+            <div class="absolute inset-0 backface-hidden bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col items-center justify-center p-8 sm:p-12 select-none overflow-hidden">
+                <div id="accent-front" class="absolute top-0 left-0 w-full h-1.5 opacity-20 bg-blue-500"></div>
+                <span class="absolute top-8 left-10 text-[10px] font-black tracking-[0.2em] text-blue-500 uppercase opacity-60">Question</span>
+                
+                <div id="card-front" class="text-4xl sm:text-5xl text-slate-800 transform scale-110 flex items-center justify-center min-h-[100px]"></div>
+                
+                <div class="absolute bottom-10 flex items-center gap-2 text-slate-300 text-[10px] font-bold uppercase tracking-widest flex-wrap justify-center">
+                    <svg class="animate-spin-slow w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    タップして解答を表示
+                </div>
+            </div>
+
+            <!-- Back -->
+            <div id="card-back-container" class="absolute inset-0 backface-hidden rounded-[2rem] shadow-[0_30px_60px_rgba(0,0,0,0.12)] border flex flex-col items-center justify-center p-8 sm:p-12 select-none overflow-hidden transition-colors duration-500" style="transform: rotateY(180deg);">
+                <div id="accent-back" class="absolute top-0 left-0 w-full h-1.5 opacity-100"></div>
+                <span id="back-label" class="absolute top-8 left-10 text-[10px] font-black tracking-[0.2em] uppercase opacity-80">Answer</span>
+                
+                <div id="card-back" class="text-4xl sm:text-5xl text-white transform scale-110 flex items-center justify-center min-h-[100px]" style="filter: drop-shadow(0 0 15px rgba(255,255,255,0.2));"></div>
+                
+                <div class="absolute bottom-10 flex items-center gap-1.5 text-white/20 text-[10px] font-bold uppercase tracking-widest">
+                    Success
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="w-full max-w-sm mt-12 relative z-10 select-none">
+        <div class="flex justify-between items-end mb-4">
+            <div class="flex flex-col">
+                <span class="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase mb-1">Session Progress</span>
+                <span id="counter" class="text-2xl font-black text-slate-900 font-mono tracking-tighter"></span>
+            </div>
+            <div id="mode-badge" class="px-3 py-1 rounded-lg text-[10px] font-black tracking-wider border uppercase transition-colors"></div>
+        </div>
+        <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/50">
+            <div id="progress-bar" class="h-full rounded-full transition-all duration-700 ease-out"></div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="flex items-center gap-6 mt-12 relative z-10">
+        <button onclick="prevCard()" class="w-20 h-20 flex items-center justify-center rounded-3xl bg-white shadow-sm hover:shadow-indigo-100 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all text-slate-400 hover:text-indigo-600 border border-slate-200/60 cursor-pointer">
+            <svg class="w-8 h-8" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <button onclick="nextCard()" class="w-20 h-20 flex items-center justify-center rounded-3xl bg-white shadow-sm hover:shadow-indigo-100 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all text-slate-400 hover:text-indigo-600 border border-slate-200/60 cursor-pointer">
+            <svg class="w-8 h-8" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+    </div>
+
+    <!-- Extra -->
+    <button onclick="resetIndex()" class="mt-10 opacity-30 hover:opacity-100 text-[10px] font-black text-slate-500 hover:text-slate-900 flex items-center gap-1.5 transition-all uppercase tracking-widest cursor-pointer">
+        <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        Reset Session
+    </button>
+
+    <script>
+        const INITIAL_CARDS = [
+            { front: "(sin x)'", back: "\\cos x", category: 'differentiation' },
+            { front: "(cos x)'", back: "-\\sin x", category: 'differentiation' },
+            { front: "(tan x)'", back: "\\frac{1}{\\cos^2 x}", category: 'differentiation' },
+            { front: "(log x)'", back: "\\frac{1}{x}", category: 'differentiation' },
+            { front: "(log_a x)'", back: "\\frac{1}{x \\log a}", category: 'differentiation' },
+            { front: "(a^x)'", back: "a^x \\log a", category: 'differentiation' },
+            { front: "(\\sqrt{x})'", back: "\\frac{1}{2\\sqrt{x}}", category: 'differentiation' },
+            { front: "(\\frac{1}{x})'", back: "-\\frac{1}{x^2}", category: 'differentiation' },
+            { front: "(log|x|)'", back: "\\frac{1}{x}", category: 'differentiation' },
+            { front: "(log_a|x|)'", back: "\\frac{1}{x \\log a}", category: 'differentiation' },
+            { front: "\\int \\sin x \\, dx", back: "-\\cos x + C", category: 'integration' },
+            { front: "\\int \\cos x \\, dx", back: "\\sin x + C", category: 'integration' },
+            { front: "\\int \\frac{dx}{\\cos^2 x}", back: "\\tan x + C", category: 'integration' },
+            { front: "\\int \\frac{dx}{\\sin^2 x}", back: "-\\frac{1}{\\tan x} + C", category: 'integration' },
+            { front: "\\int \\frac{1}{x} \\, dx", back: "\\log|x| + C", category: 'integration' },
+            { front: "\\int a^x \\, dx", back: "\\frac{a^x}{\\log a} + C", category: 'integration' },
+            { front: "\\int \\sqrt{x} \\, dx", back: "\\frac{2}{3}x\\sqrt{x} + C", category: 'integration' },
+            { front: "\\int \\frac{1}{x^2} \\, dx", back: "-\\frac{1}{x} + C", category: 'integration' },
+            { front: "\\int \\log x \\, dx", back: "x \\log x - x + C", category: 'integration' }
+        ];
+
+        let mode = 'all';
+        let allCards = [...INITIAL_CARDS];
+        let currentIndex = 0;
+        let isFlipped = false;
+
+        const theme = {
+            all: { color: 'bg-indigo-500', badge: 'Universal', tab: 'indigo-500' },
+            differentiation: { color: 'bg-blue-500', badge: 'Derivatives', tab: 'blue-500' },
+            integration: { color: 'bg-emerald-500', badge: 'Integrals', tab: 'emerald-500' }
+        };
+
+        function getFilteredCards() {
+            if (mode === 'all') return allCards;
+            return allCards.filter(c => c.category === mode);
+        }
+
+        function updateCard() {
+            const filtered = getFilteredCards();
+            if (filtered.length === 0) return;
+
+            const current = filtered[currentIndex];
+            const frontEl = document.getElementById('card-front');
+            const backEl = document.getElementById('card-back');
+            const counterEl = document.getElementById('counter');
+            const progressEl = document.getElementById('progress-bar');
+            const badgeEl = document.getElementById('mode-badge');
+            const backContainer = document.getElementById('card-back-container');
+            const accentBack = document.getElementById('accent-back');
+            const backLabel = document.getElementById('back-label');
+
+            // Render Math
+            renderMath(frontEl, current.front);
+            renderMath(backEl, current.back);
+
+            // Update Info
+            counterEl.innerHTML = `${String(currentIndex + 1).padStart(2, '0')} <span class="text-slate-200 text-xl font-normal mx-1">/</span> <span class="text-slate-300 text-xl font-medium">${String(filtered.length).padStart(2, '0')}</span>`;
+            
+            const progressVal = ((currentIndex + 1) / filtered.length) * 100;
+            progressEl.style.width = `${progressVal}%`;
+            progressEl.className = `h-full rounded-full transition-all duration-700 ease-out ${theme[mode].color}`;
+
+            badgeEl.textContent = theme[mode].badge;
+            badgeEl.className = `px-3 py-1 rounded-lg text-[10px] font-black tracking-wider border uppercase transition-colors ${
+                mode === 'differentiation' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                mode === 'integration' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                'bg-indigo-50 text-indigo-600 border-indigo-100'
+            }`;
+
+            // Update Back Card Colors
+            if (current.category === 'differentiation') {
+                backContainer.className = "absolute inset-0 backface-hidden rounded-[2rem] shadow-[0_30px_60px_rgba(0,0,0,0.12)] border flex flex-col items-center justify-center p-8 sm:p-12 select-none overflow-hidden transition-colors duration-500 bg-[#0F172A] border-blue-500/20";
+                accentBack.className = "absolute top-0 left-0 w-full h-1.5 opacity-100 bg-blue-500";
+                backLabel.className = "absolute top-8 left-10 text-[10px] font-black tracking-[0.2em] uppercase opacity-80 text-blue-400";
+            } else {
+                backContainer.className = "absolute inset-0 backface-hidden rounded-[2rem] shadow-[0_30px_60px_rgba(0,0,0,0.12)] border flex flex-col items-center justify-center p-8 sm:p-12 select-none overflow-hidden transition-colors duration-500 bg-[#061A14] border-emerald-500/20";
+                accentBack.className = "absolute top-0 left-0 w-full h-1.5 opacity-100 bg-emerald-500";
+                backLabel.className = "absolute top-8 left-10 text-[10px] font-black tracking-[0.2em] uppercase opacity-80 text-emerald-400";
+            }
+
+            // Tabs UI
+            updateTabs();
+        }
+
+        function renderMath(element, tex) {
+            if (window.katex) {
+                katex.render(tex, element, { throwOnError: false });
+            } else {
+                element.textContent = tex;
+            }
+        }
+
+        function changeMode(newMode) {
+            mode = newMode;
+            currentIndex = 0;
+            isFlipped = false;
+            document.getElementById('card').classList.remove('flipped');
+            updateCard();
+        }
+
+        function updateTabs() {
+            document.querySelectorAll('.mode-tab').forEach(tab => {
+                const id = tab.id.replace('tab-', '');
+                if (id === mode) {
+                    tab.className = `mode-tab px-6 py-2 rounded-xl text-sm font-bold transition-all duration-300 bg-white shadow-md text-slate-900 border border-slate-100`;
+                } else {
+                    tab.className = `mode-tab px-6 py-2 rounded-xl text-sm font-bold transition-all duration-300 text-slate-400 hover:text-slate-600`;
+                }
+            });
+        }
+
+        function toggleFlip() {
+            isFlipped = !isFlipped;
+            document.getElementById('card').classList.toggle('flipped', isFlipped);
+        }
+
+        function nextCard() {
+            const filtered = getFilteredCards();
+            isFlipped = false;
+            document.getElementById('card').classList.remove('flipped');
+            setTimeout(() => {
+                currentIndex = (currentIndex + 1) % filtered.length;
+                updateCard();
+            }, 100);
+        }
+
+        function prevCard() {
+            const filtered = getFilteredCards();
+            isFlipped = false;
+            document.getElementById('card').classList.remove('flipped');
+            setTimeout(() => {
+                currentIndex = (currentIndex - 1 + filtered.length) % filtered.length;
+                updateCard();
+            }, 100);
+        }
+
+        function shuffleCards() {
+            allCards.sort(() => Math.random() - 0.5);
+            currentIndex = 0;
+            isFlipped = false;
+            document.getElementById('card').classList.remove('flipped');
+            updateCard();
+        }
+
+        function resetIndex() {
+            currentIndex = 0;
+            isFlipped = false;
+            document.getElementById('card').classList.remove('flipped');
+            updateCard();
+        }
+
+        window.onload = () => {
+            shuffleCards();
+            window.addEventListener('keydown', (e) => {
+                // スペースキーはボタンにフォーカスが当たっていないとき（またはbody選択時）のみ
+                if (e.code === 'Space' && e.target === document.body) {
+                    e.preventDefault();
+                    toggleFlip();
+                } else if (e.code === 'ArrowRight') {
+                    nextCard();
+                } else if (e.code === 'ArrowLeft') {
+                    prevCard();
+                }
+            });
+        };
+    </script>
+</body>
+</html>
